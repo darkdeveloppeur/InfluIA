@@ -1,0 +1,36 @@
+// /app/src/lib/auth.ts
+
+import { PrismaAdapter } from "@auth/prisma-adapter";
+// On importe le client Prisma qu'on a généré à l'étape d'avant
+import { PrismaClient } from "../../src/generated/prisma";
+import NextAuth from "next-auth";
+
+// Importe les fournisseurs d'authentification
+import GoogleProvider from "next-auth/providers/google";
+
+const prisma = new PrismaClient();
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    // On ajoute les fournisseurs de connexion (V1: Google + Email)
+    // On doit les configurer dans les variables d'environnement
+    GoogleProvider({
+      clientId: process.env.AUTH_GOOGLE_ID,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET,
+    }),
+    // On ajoutera le fournisseur Email (pour la connexion sans mot de passe) plus tard
+  ],
+  callbacks: {
+    // Permet de s'assurer que l'ID de l'utilisateur est bien dans la session
+    // C'est utile pour tes futures requêtes côté serveur
+    async session({ session, user }) {
+      if (session.user) {
+        session.user.id = user.id;
+      }
+      return session;
+    },
+  },
+  // On ajoute une variable secrète pour la sécurité
+  secret: process.env.AUTH_SECRET,
+});
